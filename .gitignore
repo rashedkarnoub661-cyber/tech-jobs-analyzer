@@ -1,0 +1,10 @@
+# Data and DBs
+*.csv
+data/
+chroma_data/
+tech_jobs/
+
+# Python & Envs
+__pycache__/
+.venv/
+.env
