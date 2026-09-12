@@ -1,28 +1,149 @@
-# tech-jobs-analyzer
-# Tech Jobs Analyzer & Semantic Search API
+# Tech Job Trends
 
-This project serves as a technical job market trend analyzer, aiming to build an advanced Retrieval-Augmented Generation (RAG) system for semantic searching across thousands of job postings. The system extracts and stores data as vector embeddings within a ChromaDB database, normalizes the text, and feeds it as contextual prompts to Large Language Models (LLMs) via an API endpoint.
+A two-stage RAG pipeline for semantic search over technology job postings and AI-assisted career guidance.
 
-## 1. Data Acquisition from Kaggle
-The data lifecycle begins by retrieving the job postings dataset from Kaggle. The dataset is downloaded in `CSV` format, containing job details such as titles, company names, and full descriptions, serving as the foundation for the system.
+## Project overview
 
-## 2. Data Processing and Storage in ChromaDB
-The data processing pipeline is managed via Google Colab and persistently stored on Google Drive:
-* **Data Transfer:** Google Colab is mounted to Google Drive, transferring the downloaded `postings.csv` file to Drive for persistent storage.
-* **Sample Loading:** Initial dataset loading is restricted to the first 10,000 job postings to optimize memory usage and accelerate indexing.
-* **Chunking:** Long job description texts are split into smaller segments using `RecursiveCharacterTextSplitter` with a chunk size of 400 characters and an overlap of 40 characters to preserve context.
-* **Indexing:** Segmented texts are indexed into the `tech_jobs` collection in `ChromaDB` using `cosine` distance similarity. The indexing process utilizes a Parent-Child architecture to link each chunk back to its parent job posting, inserting records in batches of 100.
+The project is implemented as two notebooks:
 
-## 3. Data Cleaning, RAG Implementation, and API Construction
-This stage prepares the text for semantic querying and integrates it with generative AI:
-* **Text Normalization:** Text passes through a `TextNormalizationPipeline` to strip HTML tags, URLs, special characters, and standardize whitespace for high-quality data ingestion.
-* **Tech Role Filtering:** The system filters listings to focus exclusively on technical roles such as `developer`, `engineer`, `data scientist`, and `ai`.
-* **Semantic Search Engine:** The pre-indexed database is initialized from Drive using `ChromaJobLoader` with text embeddings generated via `DefaultEmbeddingFunction`, retrieving the top 5 most relevant matching chunks per query.
-* **RAG & LLM Integration:** Retrieved context chunks from `ChromaJobRetriever` are passed as contextual prompts to an LLM powered by the `google-genai` library.
-* **API Endpoints:** The entire pipeline is wrapped into exposed endpoints, allowing users to send natural language queries and receive accurate, data-backed insights sourced directly from real job descriptions.
+1. **Stage 1 — Build ChromaDB Index**
+   - Load `postings.csv`
+   - Clean job descriptions
+   - Split descriptions into overlapping chunks
+   - Generate embeddings with ChromaDB's default embedding function
+   - Store chunks and metadata in a persistent ChromaDB collection named `tech_jobs`
 
-## Tech Stack & Dependencies
-- `pandas`: For dataset manipulation and table operations.
-- `chromadb`: For vector database creation and similarity search.
-- `langchain-text-splitters`: For document chunking strategies.
-- `sentence-transformers` & `google-genai`: For embeddings and LLM context processing.
+2. **Stage 2 — Semantic Search + RAG Career Advisor**
+   - Load the existing ChromaDB collection
+   - Perform semantic retrieval
+   - Filter low-relevance results using cosine distance
+   - Build a grounded context prompt
+   - Generate an answer with Google Gemini
+
+## Architecture
+
+```text
+postings.csv
+    │
+    ▼
+[Stage 1: preprocessing + chunking]
+    │
+    ▼
+[ChromaDB / embeddings]
+    │
+    ▼
+[Stage 2: semantic retrieval]
+    │
+    ▼
+[Grounded prompt]
+    │
+    ▼
+[Gemini]
+    │
+    ▼
+Career / job-market answer
+```
+
+## Repository structure
+
+```text
+tech-job-trends/
+├── notebooks/
+│   ├── 01_build_chroma_index.ipynb
+│   └── 02_rag_job_advisor.ipynb
+├── data/
+│   └── .gitkeep
+├── README.md
+├── requirements.txt
+├── .gitignore
+└── .env.example
+```
+
+## Requirements
+
+Python 3.10+ is recommended. Install the project dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
+For Google Colab, you can also install them in a cell:
+
+```python
+!pip install -r requirements.txt
+```
+
+## Dataset
+
+Place the job-posting dataset at:
+
+```text
+data/postings.csv
+```
+
+or update `DATA_PATH` in `01_build_chroma_index.ipynb` to match your environment.
+
+The current implementation reads the first 10,000 rows by default.
+
+> Do not commit a dataset unless you have the right to redistribute it and it is appropriate for a public repository.
+
+## API key
+
+Set your Gemini API key as an environment variable:
+
+```bash
+export GEMINI_API_KEY="your-api-key"
+```
+
+For Windows PowerShell:
+
+```powershell
+$env:GEMINI_API_KEY = "your-api-key"
+```
+
+In Google Colab, prefer Colab Secrets or the runtime environment. **Do not hard-code API keys in the notebook.**
+
+## Running the project
+
+### Step 1 — Build the vector index
+
+Open:
+
+```text
+notebooks/01_build_chroma_index.ipynb
+```
+
+Set `DATA_PATH`, run the notebook, and confirm that `chroma_db/` is created.
+
+### Step 2 — Run the RAG advisor
+
+Open:
+
+```text
+notebooks/02_rag_job_advisor.ipynb
+```
+
+Set `GEMINI_API_KEY`, update `USER_QUERY`, and run the notebook.
+
+## Example query
+
+```text
+Python developer with machine learning experience
+```
+
+The retriever returns the most relevant job-description chunks, and Gemini generates the final answer using only that retrieved context.
+
+## Notes
+
+- `chroma_db/` is generated data and is excluded from Git.
+- `.env` is excluded from Git.
+- Notebook execution outputs are cleared in the clean versions so the repository stays lightweight and readable.
+- The RAG prompt explicitly instructs the model not to invent information outside the retrieved job context.
+
+## Limitations
+
+This repository contains a prototype RAG workflow rather than a production job-search application. Retrieval quality depends on the source dataset, chunking strategy, embeddings, and relevance threshold.
+
+## License
+
+Add a license that matches your intended use and the license terms of any third-party dataset used by the project.
