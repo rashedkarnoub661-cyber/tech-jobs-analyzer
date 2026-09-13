@@ -1,28 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*.so
-.venv/
-venv/
-env/
-
-# Environment and secrets
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
 # Jupyter
 .ipynb_checkpoints/
 
-# Local data / generated vector store
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local datasets
 data/*.csv
 data/*.json
 data/*.parquet
-chroma_db/
-*.sqlite3
+data/*.xlsx
 
-# OS / editor
+# ChromaDB
+chroma_db/
+**/chroma_db/
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Local IDE settings
 .vscode/
 .idea/
