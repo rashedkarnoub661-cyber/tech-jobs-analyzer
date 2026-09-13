@@ -77,6 +77,7 @@ The second stage:
 4.Builds a grounded context prompt.
 5.Sends the retrieved context to Google Gemini.
 6.Generates a job-market / career-oriented answer.
+
 Streamlit Application
 
 The project includes an interactive Streamlit web interface in:
@@ -108,6 +109,7 @@ tech-jobs-analyzer/
 ├── requirements.txt
 ├── .gitignore
 └── .env.example
+
 Technologies
 Python
 Pandas
