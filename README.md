@@ -49,7 +49,6 @@ Streamlit Interface
        |
        v
 Career / Job-Market Answer
-
 Project Stages
 Stage 1 — Build ChromaDB Index
 
@@ -64,7 +63,6 @@ The first stage:
 3.Splits descriptions into overlapping text chunks.
 4.Generates embeddings.
 5.Stores the chunks and metadata in ChromaDB.
-
 Stage 2 — Semantic Search + RAG Career Advisor
 
 Notebook:
@@ -79,21 +77,19 @@ The second stage:
 4.Builds a grounded context prompt.
 5.Sends the retrieved context to Google Gemini.
 6.Generates a job-market / career-oriented answer.
-
 Streamlit Application
 
-The project also includes an interactive web interface:
+The project includes an interactive Streamlit web interface in:
 
 app.py
 
-The Streamlit application allows users to:
+The application allows users to:
 
 1.Enter a natural-language job query.
 2.Search the ChromaDB vector database.
-3.View the retrieved job-description chunks.
+3.View retrieved job-posting information.
 4.Inspect similarity / distance values.
-5.Generate an AI-assisted answer using Google Gemini.
-
+5.Generate an AI-assisted response using Google Gemini.
 Repository Structure
 tech-jobs-analyzer/
 ├── app.py
@@ -138,7 +134,7 @@ API Key
 
 The Gemini API key must not be hard-coded in the application or notebook.
 
-Set it as an environment variable:
+Set it as an environment variable.
 
 Linux / macOS
 export GEMINI_API_KEY="your-api-key"
@@ -179,19 +175,19 @@ The retriever returns relevant job-description chunks, and Gemini generates the 
 
 Step 3 — Run the Streamlit application
 
-Make sure the ChromaDB database has already been created.
+Make sure the ChromaDB vector store has already been created.
 
 Then run:
 
 streamlit run app.py
 
-The Streamlit interface will open in your browser.
+The application will open in your browser.
 
 Enter a query such as:
 
 Python developer with machine learning experience
 
-The application will retrieve relevant job postings and generate a grounded response using the retrieved context.
+The application retrieves relevant job postings from ChromaDB and generates a grounded response using Google Gemini.
 
 Streamlit Features
 
@@ -214,7 +210,7 @@ Chunking strategy
 Embedding model
 Relevance threshold
 
-The current implementation also requires the ChromaDB vector store to be created before the Streamlit application can be used.
+The Streamlit application requires the ChromaDB vector store to be created before it can be used.
 
 Security
 
@@ -228,4 +224,4 @@ Large local datasets
 Generated ChromaDB data
 License
 
-Add a license that matches your intended use and the license terms of any third-party dataset used by the project
+Add a license that matches your intended use and the license terms of any third-party dataset used by the project.
