@@ -1,77 +1,119 @@
-import os
-from pathlib import Path
+# Install libraries
+!pip install -q chromadb google-genai streamlit python-dotenv
 
+# Mount Drive
+from google.colab import drive
+drive.mount("/content/drive")
+
+# Load Gemini key from Colab Secrets
+from google.colab import userdata
+import os
+
+os.environ["GEMINI_API_KEY"] = userdata.get("GEMINI_API_KEY")
+os.environ["CHROMA_DB_PATH"] = "/content/drive/MyDrive/chroma_db"
+
+print("✅ Gemini API key loaded.")
+print("✅ ChromaDB path configured.")
+app_code = r'''
+import os
 import chromadb
 import streamlit as st
 from chromadb.utils import embedding_functions
 from google import genai
 from google.genai import types
 
-# -----------------------------
-# Configuration
-# -----------------------------
-BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = os.getenv("CHROMA_DB_PATH", str(BASE_DIR / "chroma_db"))
-COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "tech_jobs")
+DB_PATH = os.getenv(
+    "CHROMA_DB_PATH",
+    "/content/drive/MyDrive/chroma_db"
+)
+
+COLLECTION_NAME = os.getenv(
+    "CHROMA_COLLECTION",
+    "tech_jobs"
+)
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-3.5-flash"
+)
+
 TOP_K = int(os.getenv("TOP_K", "3"))
-DISTANCE_THRESHOLD = float(os.getenv("DISTANCE_THRESHOLD", "0.8"))
+DISTANCE_THRESHOLD = float(
+    os.getenv("DISTANCE_THRESHOLD", "0.8")
+)
 
 st.set_page_config(
     page_title="Tech Jobs Analyzer",
     page_icon="💼",
-    layout="wide",
+    layout="wide"
 )
 
 st.title("💼 Tech Jobs Analyzer")
-st.write("RAG-powered semantic search over technology job postings using ChromaDB and Google Gemini.")
+
+st.write(
+    "RAG-powered semantic search over technology job postings "
+    "using ChromaDB and Google Gemini."
+)
 
 if not GEMINI_API_KEY:
-    st.error("GEMINI_API_KEY is not configured. Set it as an environment variable before using the app.")
+    st.error("GEMINI_API_KEY is not configured.")
     st.stop()
 
-if not Path(DB_PATH).exists():
+if not os.path.exists(DB_PATH):
     st.error(
-        f"ChromaDB database was not found at: {DB_PATH}\n\n"
-        "Run notebooks/01_build_chroma_index.ipynb first, or set CHROMA_DB_PATH to the correct location."
+        f"ChromaDB database was not found at: {DB_PATH}"
     )
     st.stop()
 
-
-@st.cache_resource(show_spinner=False)
+@st.cache_resource
 def load_resources():
+
     embedding_fn = embedding_functions.DefaultEmbeddingFunction()
-    client = chromadb.PersistentClient(path=DB_PATH)
-    collection = client.get_collection(
-        name=COLLECTION_NAME,
-        embedding_function=embedding_fn,
+
+    chroma_client = chromadb.PersistentClient(
+        path=DB_PATH
     )
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+
+    collection = chroma_client.get_collection(
+        name=COLLECTION_NAME,
+        embedding_function=embedding_fn
+    )
+
+    gemini_client = genai.Client(
+        api_key=GEMINI_API_KEY
+    )
+
     return collection, gemini_client
 
 
 try:
     collection, gemini_client = load_resources()
+
 except Exception as exc:
-    st.error(f"Could not initialize the application: {exc}")
+    st.error(
+        f"Could not initialize the application: {exc}"
+    )
     st.stop()
 
 
 query = st.text_input(
     "🔍 Enter your job query",
-    placeholder="e.g. Python developer with machine learning experience",
+    placeholder="e.g. Python developer with machine learning experience"
 )
 
+
 if st.button("Analyze jobs", type="primary"):
+
     if not query.strip():
         st.warning("Please enter a job query.")
         st.stop()
 
     try:
+
         results = collection.query(
             query_texts=[query],
-            n_results=TOP_K,
+            n_results=TOP_K
         )
 
         documents = results.get("documents", [[]])[0]
@@ -81,21 +123,33 @@ if st.button("Analyze jobs", type="primary"):
         context_blocks = []
         retrieval_results = []
 
-        for document, metadata, distance in zip(documents, metadatas, distances):
-            job_title = metadata.get("job_title", "Unknown title")
-            company = metadata.get("company", "Unknown company")
-            distance = float(distance)
+        for document, metadata, distance in zip(
+            documents,
+            metadatas,
+            distances
+        ):
 
-            retrieval_results.append(
-                {
-                    "job_title": job_title,
-                    "company": company,
-                    "distance": distance,
-                    "chunk": document,
-                }
+            job_title = metadata.get(
+                "job_title",
+                "Unknown title"
             )
 
+            company = metadata.get(
+                "company",
+                "Unknown company"
+            )
+
+            distance = float(distance)
+
+            retrieval_results.append({
+                "job_title": job_title,
+                "company": company,
+                "distance": distance,
+                "chunk": document,
+            })
+
             if distance <= DISTANCE_THRESHOLD:
+
                 context_blocks.append(
                     f"- Job Title: {job_title}\n"
                     f"  Company: {company}\n"
@@ -103,13 +157,20 @@ if st.button("Analyze jobs", type="primary"):
                 )
 
         context_text = "\n".join(context_blocks)
+
         if not context_text:
-            context_text = "No relevant job data found in the retrieved results."
+            context_text = (
+                "No relevant job data found "
+                "in the retrieved results."
+            )
 
         prompt = f"""
 You are an expert AI Career Advisor analyzing technology job market data.
+
 Answer the user's question STRICTLY based on the provided Job Context below.
+
 Do not invent jobs, companies, requirements, salaries, locations, or other facts.
+
 If the context does not contain enough information, clearly say so.
 
 ### Job Context:
@@ -122,25 +183,42 @@ If the context does not contain enough information, clearly say so.
 """
 
         with st.spinner("Analyzing the retrieved jobs..."):
+
             response = gemini_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.1),
+                config=types.GenerateContentConfig(
+                    temperature=0.1
+                )
             )
 
-        llm_answer = response.text or "No answer was returned by the model."
+        llm_answer = (
+            response.text
+            if response.text
+            else "No answer was returned by the model."
+        )
 
         st.subheader("📡 Results")
         st.markdown(f"**Query:** `{query}`")
 
         st.subheader("🔎 Retrieval Results")
+
         if retrieval_results:
-            for index, item in enumerate(retrieval_results, start=1):
+
+            for index, item in enumerate(
+                retrieval_results,
+                start=1
+            ):
+
                 with st.expander(
-                    f"{index}. {item['job_title']} — {item['company']} "
-                    f"(cosine distance: {item['distance']:.4f})"
+                    f"{index}. {item['job_title']} — "
+                    f"{item['company']} "
+                    f"(cosine distance: "
+                    f"{item['distance']:.4f})"
                 ):
+
                     st.write(item["chunk"])
+
         else:
             st.info("No retrieval results were returned.")
 
@@ -148,4 +226,54 @@ If the context does not contain enough information, clearly say so.
         st.markdown(llm_answer)
 
     except Exception as exc:
-        st.error(f"An error occurred while processing the query: {exc}")
+
+        st.error(
+            f"An error occurred while processing the query: {exc}"
+        )
+'''
+
+with open("/content/app.py", "w", encoding="utf-8") as f:
+    f.write(app_code)
+
+print("✅ app.py created successfully.")
+import subprocess
+import time
+
+process = subprocess.Popen(
+    [
+        "streamlit",
+        "run",
+        "/content/app.py",
+        "--server.port=8501",
+        "--server.address=0.0.0.0",
+        "--server.headless=true",
+    ],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=True,
+)
+
+time.sleep(5)
+
+print("✅ Streamlit started successfully.")
+print("✅ Port: 8501")
+!pip install -q pyngrok
+from google.colab import userdata
+from pyngrok import ngrok
+
+# Get ngrok token from Colab Secrets
+NGROK_AUTH_TOKEN = userdata.get("NGROK_AUTH_TOKEN")
+
+if not NGROK_AUTH_TOKEN:
+    raise ValueError(
+        "NGROK_AUTH_TOKEN was not found in Colab Secrets."
+    )
+
+# Configure ngrok
+ngrok.set_auth_token(NGROK_AUTH_TOKEN)
+
+# Open tunnel to Streamlit
+public_url = ngrok.connect(8501)
+
+print("✅ Streamlit is available here:")
+print(public_url)
