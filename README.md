@@ -1,6 +1,6 @@
 # Tech Jobs Analyzer
 
-A two-stage RAG pipeline for semantic search over technology job postings and AI-assisted career guidance.
+A two-stage RAG pipeline for semantic search over technology job postings, with an interactive Streamlit interface and AI-assisted career guidance.
 
 ## Project Overview
 
@@ -15,7 +15,8 @@ The system combines:
 - Semantic search
 - Relevance filtering using cosine distance
 - Grounded prompt construction
-- Google Gemini for AI-generated answers
+- Google Gemini
+- Streamlit web interface
 
 ## Pipeline
 
@@ -44,10 +45,14 @@ Grounded RAG Prompt
 Google Gemini
        |
        v
+Streamlit Interface
+       |
+       v
 Career / Job-Market Answer
 
 Project Stages
 Stage 1 — Build ChromaDB Index
+
 Notebook:
 
 notebooks/01_build_chroma_index.ipynb
@@ -75,13 +80,32 @@ The second stage:
 5.Sends the retrieved context to Google Gemini.
 6.Generates a job-market / career-oriented answer.
 
+Streamlit Application
+
+The project also includes an interactive web interface:
+
+app.py
+
+The Streamlit application allows users to:
+
+1.Enter a natural-language job query.
+2.Search the ChromaDB vector database.
+3.View the retrieved job-description chunks.
+4.Inspect similarity / distance values.
+5.Generate an AI-assisted answer using Google Gemini.
+
 Repository Structure
 tech-jobs-analyzer/
+├── app.py
+│
 ├── notebooks/
 │   ├── 01_build_chroma_index.ipynb
 │   └── 02_rag_job_advisor.ipynb
 │
 ├── data/
+│   └── .gitkeep
+│
+├── assets/
 │   └── .gitkeep
 │
 ├── README.md
@@ -96,6 +120,7 @@ Vector Embeddings
 Semantic Search
 RAG
 Google Gemini API
+Streamlit
 Jupyter / Google Colab
 Dataset
 
@@ -111,7 +136,7 @@ Make sure you have the right to redistribute any dataset before publishing it.
 
 API Key
 
-The Gemini API key must not be hard-coded in the notebook.
+The Gemini API key must not be hard-coded in the application or notebook.
 
 Set it as an environment variable:
 
@@ -124,13 +149,9 @@ For Google Colab, use Colab Secrets or the runtime environment.
 
 Installation
 
-Install the dependencies with:
+Install the project dependencies with:
 
 pip install -r requirements.txt
-
-For Google Colab:
-
-!pip install -r requirements.txt
 Running the Project
 Step 1 — Build the vector index
 
@@ -142,7 +163,7 @@ Set the dataset path for your environment and run the notebook.
 
 This creates the local ChromaDB vector store.
 
-Step 2 — Run the RAG advisor
+Step 2 — Run the RAG notebook
 
 Open:
 
@@ -156,6 +177,32 @@ Python developer with machine learning experience
 
 The retriever returns relevant job-description chunks, and Gemini generates the final answer using the retrieved context.
 
+Step 3 — Run the Streamlit application
+
+Make sure the ChromaDB database has already been created.
+
+Then run:
+
+streamlit run app.py
+
+The Streamlit interface will open in your browser.
+
+Enter a query such as:
+
+Python developer with machine learning experience
+
+The application will retrieve relevant job postings and generate a grounded response using the retrieved context.
+
+Streamlit Features
+
+The Streamlit interface provides:
+
+Natural-language job search
+Semantic retrieval from ChromaDB
+Retrieved job metadata
+Similarity / distance information
+Grounded Gemini response
+Interactive browser-based interface
 Limitations
 
 This repository is a prototype RAG workflow rather than a production job-search application.
@@ -166,15 +213,19 @@ Dataset quality
 Chunking strategy
 Embedding model
 Relevance threshold
+
+The current implementation also requires the ChromaDB vector store to be created before the Streamlit application can be used.
+
 Security
 
 Never commit:
 
 API keys
 .env files
+Streamlit secrets
 Private credentials
 Large local datasets
 Generated ChromaDB data
 License
 
-Add a license that matches your intended use and the license terms of any third-party dataset used by the project.
+Add a license that matches your intended use and the license terms of any third-party dataset used by the project
