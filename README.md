@@ -3,6 +3,9 @@
 A two-stage RAG pipeline for semantic search over technology job postings, with an interactive Streamlit interface and AI-assisted career guidance.
 
 ## Project Overview
+[![Open Stage 1 in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rashedkarnoub661-cyber/tech-jobs-analyzer/blob/main/notebooks/01_build_chroma_index.ipynb)
+
+[![Open Stage 2 in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rashedkarnoub661-cyber/tech-jobs-analyzer/blob/main/notebooks/02_rag_job_advisor.ipynb)
 
 This project implements a two-stage Retrieval-Augmented Generation (RAG) workflow for analyzing technology job postings.
 
