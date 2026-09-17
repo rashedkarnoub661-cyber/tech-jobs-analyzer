@@ -1,4 +1,5 @@
 import os
+import time
 
 import chromadb
 import streamlit as st
@@ -6,6 +7,10 @@ from chromadb.utils import embedding_functions
 from google import genai
 from google.genai import types
 
+
+# =========================
+# Configuration
+# =========================
 
 DB_PATH = os.getenv(
     "CHROMA_DB_PATH",
@@ -17,15 +22,15 @@ COLLECTION_NAME = os.getenv(
     "tech_jobs"
 )
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY"
+)
 
 GEMINI_MODELS = [
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-3.5-flash",
 ]
-
 
 TOP_K = int(
     os.getenv("TOP_K", "3")
@@ -36,12 +41,15 @@ DISTANCE_THRESHOLD = float(
 )
 
 
+# =========================
+# Streamlit
+# =========================
+
 st.set_page_config(
     page_title="Tech Jobs Analyzer",
     page_icon="💼",
     layout="wide"
 )
-
 
 st.title("💼 Tech Jobs Analyzer")
 
@@ -50,6 +58,10 @@ st.write(
     "using ChromaDB and Google Gemini."
 )
 
+
+# =========================
+# Validation
+# =========================
 
 if not GEMINI_API_KEY:
     st.error(
@@ -64,6 +76,10 @@ if not os.path.exists(DB_PATH):
     )
     st.stop()
 
+
+# =========================
+# Load resources
+# =========================
 
 @st.cache_resource
 def load_resources():
@@ -101,6 +117,10 @@ except Exception as exc:
     st.stop()
 
 
+# =========================
+# Query
+# =========================
+
 query = st.text_input(
     "🔍 Enter your job query",
     placeholder=(
@@ -109,6 +129,10 @@ query = st.text_input(
     )
 )
 
+
+# =========================
+# Analyze
+# =========================
 
 if st.button(
     "Analyze jobs",
@@ -126,11 +150,14 @@ if st.button(
 
     try:
 
+        # -------------------------
+        # Semantic retrieval
+        # -------------------------
+
         results = collection.query(
             query_texts=[query],
             n_results=TOP_K
         )
-
 
         documents = results.get(
             "documents",
@@ -151,6 +178,10 @@ if st.button(
         context_blocks = []
         retrieval_results = []
 
+
+        # -------------------------
+        # Process results
+        # -------------------------
 
         for document, metadata, distance in zip(
             documents,
@@ -203,6 +234,10 @@ if st.button(
             )
 
 
+        # -------------------------
+        # Grounded prompt
+        # -------------------------
+
         prompt = f"""
 You are an expert AI Career Advisor analyzing technology job market data.
 
@@ -222,61 +257,79 @@ If the context does not contain enough information, clearly say so.
 """
 
 
-      with st.spinner(
-    "Analyzing the retrieved jobs..."
-):
+        # -------------------------
+        # Gemini generation
+        # -------------------------
 
-        response = None
-        last_error = None
+        with st.spinner(
+            "Analyzing the retrieved jobs..."
+        ):
 
-        import time
+            response = None
+            last_error = None
 
-        for model in GEMINI_MODELS:
+            for model in GEMINI_MODELS:
 
-            try:
+                for attempt in range(3):
 
-                response = gemini_client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.1
-                )
-            )
+                    try:
 
-                if response.text:
+                        response = (
+                            gemini_client.models.generate_content(
+                                model=model,
+                                contents=prompt,
+                                config=types.GenerateContentConfig(
+                                    temperature=0.1
+                                )
+                            )
+                        )
+
+                        if response.text:
+                            break
+
+                    except Exception as exc:
+
+                        last_error = exc
+
+                        error_text = str(exc)
+
+                        is_temporary_error = (
+                            "503" in error_text
+                            or "UNAVAILABLE" in error_text
+                            or "high demand"
+                            in error_text.lower()
+                        )
+
+                        if is_temporary_error:
+
+                            wait_time = 2 ** attempt
+
+                            time.sleep(
+                                wait_time
+                            )
+
+                            continue
+
+                        raise
+
+                if response is not None and response.text:
                     break
 
-            except Exception as exc:
-
-                last_error = exc
-
-                error_text = str(exc)
-
-                if (
-                    "503" in error_text
-                    or "UNAVAILABLE" in error_text
-                    or "high demand" in error_text.lower()
-            ):
-
-                    time.sleep(2)
-
-                    continue
-
-                raise
 
         if response is None or not response.text:
 
             raise RuntimeError(
-                f"Gemini generation failed. Last error: {last_error}"
-        )
+                f"Gemini generation failed. "
+                f"Last error: {last_error}"
+            )
 
 
-        llm_answer = (
-            response.text
-            if response.text
-            else "No answer was returned by the model."
-        )
+        llm_answer = response.text
 
+
+        # -------------------------
+        # Display results
+        # -------------------------
 
         st.subheader(
             "📡 Results"
