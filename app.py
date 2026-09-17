@@ -20,10 +20,11 @@ COLLECTION_NAME = os.getenv(
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 
-GEMINI_MODEL = os.getenv(
-    "GEMINI_MODEL",
-    "gemini-3.5-flash-lite"
-)
+GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+]
 
 
 TOP_K = int(
@@ -221,19 +222,53 @@ If the context does not contain enough information, clearly say so.
 """
 
 
-        with st.spinner(
-            "Analyzing the retrieved jobs..."
-        ):
+      with st.spinner(
+    "Analyzing the retrieved jobs..."
+):
 
-            response = (
-                gemini_client.models.generate_content(
-                    model=GEMINI_MODEL,
+        response = None
+        last_error = None
+
+        import time
+
+        for model in GEMINI_MODELS:
+
+            try:
+
+                response = gemini_client.models.generate_content(
+                    model=model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         temperature=0.1
-                    )
                 )
             )
+
+                if response.text:
+                    break
+
+            except Exception as exc:
+
+                last_error = exc
+
+                error_text = str(exc)
+
+                if (
+                    "503" in error_text
+                    or "UNAVAILABLE" in error_text
+                    or "high demand" in error_text.lower()
+            ):
+
+                    time.sleep(2)
+
+                    continue
+
+                raise
+
+        if response is None or not response.text:
+
+            raise RuntimeError(
+                f"Gemini generation failed. Last error: {last_error}"
+        )
 
 
         llm_answer = (
